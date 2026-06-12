@@ -120,8 +120,16 @@ instance.interceptors.response.use(
       }
     }
 
-    // 网络错误等
-    if (error.message && !error.response) {
+    // 提取 HTTP 错误响应中的业务错误信息（401 已在上方处理，此处处理 400/403/404/500 等）
+    if (error.response?.data) {
+      const { message, code } = error.response.data
+      if (message) {
+        ElMessage.error(code ? `[${code}] ${message}` : message)
+      } else {
+        ElMessage.error(`请求失败 (HTTP ${error.response.status})`)
+      }
+    } else if (error.message && !error.response) {
+      // 网络错误（无响应）
       ElMessage.error('网络异常，请检查网络连接')
     }
 
@@ -156,6 +164,15 @@ export function put<T = unknown>(
   config?: AxiosRequestConfig,
 ): Promise<ApiResponse<T>> {
   return instance.put(url, data, config).then((res) => res.data)
+}
+
+/** PATCH */
+export function patch<T = unknown>(
+  url: string,
+  data?: Record<string, unknown>,
+  config?: AxiosRequestConfig,
+): Promise<ApiResponse<T>> {
+  return instance.patch(url, data, config).then((res) => res.data)
 }
 
 /** DELETE */

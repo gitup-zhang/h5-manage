@@ -21,8 +21,6 @@ const cachedViews = computed(() => tagsViewStore.cachedViews)
 <style lang="scss" scoped>
 .app-main {
   min-height: 100%;
-  padding: 16px;
-  overflow-y: auto;
   background-color: #f5f7fa;
 }
 </style>

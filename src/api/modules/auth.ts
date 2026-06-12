@@ -1,4 +1,4 @@
-import { post, get, put } from '@/utils/request'
+import { post, get, put, patch } from '@/utils/request'
 import type { ApiResponse } from '@/types/api'
 import type {
   SmsSendParams,
@@ -10,6 +10,7 @@ import type {
   RegisterParams,
   ResetPasswordParams,
   RefreshTokenParams,
+  ChangePasswordParams,
   UserInfo,
   UpdateUserParams,
 } from '@/types/user'
@@ -47,9 +48,14 @@ export function loginBySms(data: SmsLoginParams): Promise<ApiResponse<LoginResul
 
 // ====== 4. 忘记密码 ======
 
-/** 重置密码 */
+/** 重置密码（忘记密码，无需登录） */
 export function resetPassword(data: ResetPasswordParams): Promise<ApiResponse<null>> {
   return post('/users/password/reset', data as unknown as Record<string, unknown>)
+}
+
+/** 修改当前用户密码（需登录） */
+export function changePassword(data: ChangePasswordParams): Promise<ApiResponse<null>> {
+  return patch('/users/me/password', data as unknown as Record<string, unknown>)
 }
 
 // ====== 5. Token 管理 ======

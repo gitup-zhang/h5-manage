@@ -25,7 +25,7 @@ export const useUserStore = defineStore('user', () => {
   const isLoggedIn = computed(() => !!accessToken.value)
   const nickname = computed(() => userInfo.value?.nickname || '')
   const avatar = computed(() => userInfo.value?.avatar_url || '')
-  const role = computed<UserRole>(() => userInfo.value?.role || 'user')
+  const role = computed<UserRole>(() => (userInfo.value?.role?.toLowerCase() || 'user') as UserRole)
   const isAdmin = computed(() => role.value === 'admin' || role.value === 'superadmin')
   const isSuperAdmin = computed(() => role.value === 'superadmin')
 

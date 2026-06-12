@@ -2,13 +2,11 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/app'
-import { ElMenu, ElMenuItem, ElSubMenu } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
 const appStore = useAppStore()
 
-// 从路由配置生成菜单
 interface MenuItem {
   path: string
   title: string
@@ -16,46 +14,83 @@ interface MenuItem {
   children?: MenuItem[]
 }
 
+interface MenuGroup {
+  title: string
+  icon: string
+  sort: number
+  children: MenuItem[]
+}
+
 function generateMenus(): MenuItem[] {
   const routes = router.options.routes
-  const menus: MenuItem[] = []
+  const result: MenuItem[] = []
 
-  for (const route of routes) {
-    // 跳过隐藏的、没有 children 的顶层路由
-    if (route.meta?.hidden || !route.children) continue
+  // 找到 DefaultLayout 的路由（path: '/'）
+  const layoutRoute = routes.find((r) => r.path === '/' && r.component)
+  if (!layoutRoute?.children) return result
 
-    const children = route.children
-      .filter((child) => !child.meta?.hidden)
-      .map((child) => ({
-        path: `${route.path}/${child.path}`.replace(/\/+/g, '/'),
-        title: (child.meta?.title as string) || child.name?.toString() || '',
+  // 按 parentTitle 分组
+  const groups = new Map<string, MenuGroup>()
+
+  for (const child of layoutRoute.children) {
+    if (child.meta?.hidden) continue
+
+    const parentTitle = (child.meta?.parentTitle as string) || ''
+    const parentIcon = (child.meta?.parentIcon as string) || ''
+    const parentSort = (child.meta?.parentSort as number) || 0
+    const childPath = `/${child.path}`.replace(/\/+/g, '/')
+    const childTitle = (child.meta?.title as string) || child.name?.toString() || ''
+
+    if (!parentTitle) {
+      // 无父级分组 → 顶级菜单项（如仪表盘）
+      result.push({
+        path: childPath,
+        title: childTitle,
         icon: (child.meta?.icon as string) || '',
-      }))
-
-    if (children.length > 0) {
-      menus.push({
-        path: route.path,
-        title: (route.meta?.title as string) || route.name?.toString() || '',
-        icon: (route.meta?.icon as string) || '',
-        children,
+      })
+    } else {
+      // 有父级分组 → 放入对应组
+      if (!groups.has(parentTitle)) {
+        groups.set(parentTitle, {
+          title: parentTitle,
+          icon: parentIcon,
+          sort: parentSort,
+          children: [],
+        })
+      }
+      groups.get(parentTitle)!.children.push({
+        path: childPath,
+        title: childTitle,
+        icon: '',
       })
     }
   }
 
-  return menus
+  // 将分组转为子菜单，按 sort 排序
+  const sortedGroups = [...groups.values()].sort((a, b) => a.sort - b.sort)
+  for (const group of sortedGroups) {
+    result.push({
+      path: '',
+      title: group.title,
+      icon: group.icon,
+      children: group.children,
+    })
+  }
+
+  return result
 }
 
 const menus = computed(() => generateMenus())
 const activeMenu = computed(() => route.path)
 
 function handleSelect(path: string) {
-  router.push(path)
+  if (path) router.push(path)
 }
 </script>
 
 <template>
   <div class="sidebar-container" :style="{ width: appStore.sidebarWidth }">
-    <!-- Logo 区域 -->
+    <!-- Logo -->
     <div class="sidebar-logo">
       <img src="@/assets/images/logo.svg" alt="logo" class="logo-img" />
       <transition name="fade">
@@ -74,7 +109,7 @@ function handleSelect(path: string) {
       class="sidebar-menu"
       @select="handleSelect"
     >
-      <template v-for="menu in menus" :key="menu.path">
+      <template v-for="menu in menus" :key="menu.title">
         <!-- 单级菜单 -->
         <template v-if="!menu.children || menu.children.length === 0">
           <el-menu-item :index="menu.path">
@@ -82,7 +117,7 @@ function handleSelect(path: string) {
           </el-menu-item>
         </template>
         <!-- 多级菜单 -->
-        <el-sub-menu v-else :index="menu.path">
+        <el-sub-menu v-else :index="menu.title">
           <template #title>
             <span>{{ menu.title }}</span>
           </template>

@@ -11,16 +11,6 @@ const systemRoutes: RouteRecordRaw = {
   },
   children: [
     {
-      path: 'users',
-      name: 'UserManage',
-      component: () => import('@/views/system/UserManage.vue'),
-      meta: {
-        title: '用户管理',
-        icon: 'User',
-        permission: 'user:list',
-      },
-    },
-    {
       path: 'roles',
       name: 'RoleManage',
       component: () => import('@/views/system/RoleManage.vue'),

@@ -34,6 +34,7 @@ export interface UserInfo {
   role: UserRole
   role_name: string
   status: number
+  user_status: string
   fields: FieldItem[]
 }
 
@@ -94,6 +95,37 @@ export interface RefreshTokenParams {
   refresh_token: string
 }
 
+/** 修改密码（已登录用户） */
+export interface ChangePasswordParams {
+  verify_token: string
+  new_password: string
+}
+
+// ====== 消息管理 ======
+
+/** 消息目标类型 */
+export type MessageTargetType = 'ALL' | 'FIELD'
+
+/** 消息列表项 */
+export interface MessageItem {
+  id: number
+  title: string
+  content: string
+  sender_id: number
+  target_type: MessageTargetType
+  target_id: number
+  send_time: string
+  create_time: string
+}
+
+/** 创建消息参数 */
+export interface CreateMessageParams {
+  title: string
+  content: string
+  target_type: MessageTargetType
+  target_id?: number
+}
+
 /** 更新用户信息 */
 export interface UpdateUserParams {
   nickname?: string
@@ -108,7 +140,142 @@ export interface UpdateUserParams {
   field_ids?: number[]
 }
 
-// ====== 管理端类型 ======
+// ====== 行业管理 ======
+
+export interface Industry {
+  id: number
+  industry_code: string
+  industry_name: string
+  desc: string
+  enable: 1 | 2
+}
+
+export interface UpdateIndustryStatusParams {
+  operation: 'ENABLE' | 'DISABLE'
+}
+
+// ====== 领域管理 ======
+
+export interface Field {
+  id: number
+  field_code: string
+  field_name: string
+  desc: string
+  enable: 1 | 2
+}
+
+export interface UpdateFieldStatusParams {
+  operation: 'ENABLE' | 'DISABLE'
+}
+
+// ====== 活动管理 ======
+
+export interface EventField {
+  field_id: number
+  field_code: string
+  field_name: string
+}
+
+export interface EventImage {
+  image_id: number
+  url: string
+}
+
+export interface EventUserInfoField {
+  user_info_id: number
+  code: string
+  name: string
+}
+
+/** 活动列表项 */
+export interface EventItem {
+  id: number
+  title: string
+  event_start_time: string
+  event_end_time: string
+  registration_start_time: string
+  registration_end_time: string
+  max_registrants: number
+  current_registrants: number
+  remaining_quota: number
+  event_address: string
+  status: string
+  cover_image_url: string
+  member_count: number
+  need_invite_code: number
+  invite_code?: string
+  fields: EventField[]
+}
+
+/** 活动详情 */
+export interface EventDetail {
+  title: string
+  detail: string
+  event_start_time: string
+  event_end_time: string
+  registration_start_time: string
+  registration_end_time: string
+  max_registrants: number
+  current_registrants: number
+  remaining_quota: number
+  event_address: string
+  status: string
+  cover_image_url: string
+  need_invite_code: number
+  invite_code?: string
+  images: EventImage[]
+  user_info: EventUserInfoField[]
+  fields: EventField[]
+}
+
+/** 创建/更新活动参数 */
+export interface EventParams {
+  title: string
+  detail: string
+  event_start_time: string
+  event_end_time: string
+  registration_start_time: string
+  registration_end_time: string
+  max_registrants?: number
+  event_address: string
+  cover_image_url?: string
+  need_invite_code: number
+  image_id_list?: number[]
+  user_info_id_list?: number[]
+  field_id_list?: number[]
+}
+
+/** 报名用户 */
+export interface EventRegistration {
+  name: string
+  phone_number: string
+  email: string
+  industry_id: number
+  industry_name: string
+  position: string
+  unit: string
+  department: string
+}
+
+// ====== 管理端操作类型 ======
+
+/** 更新用户状态 */
+export interface UpdateUserStatusParams {
+  operation: 'ENABLE' | 'DISABLE'
+}
+
+/** 变更用户角色 */
+export interface UpdateUserRoleParams {
+  role: 'USER' | 'ADMIN' | 'SUPERADMIN'
+}
+
+/** 查看手机号结果 */
+export interface PhoneNumberResult {
+  user_id: number
+  phone_number: string
+}
+
+// ====== 管理端基础类型 ======
 
 /** 角色 */
 export interface Role {
@@ -135,4 +302,36 @@ export interface MenuItem {
   hidden: boolean
   keepAlive: boolean
   children?: MenuItem[]
+}
+
+// ====== Dashboard ======
+
+/** 用户概览 */
+export interface DashboardUserSummary {
+  total_count: number
+}
+
+/** 活动列表项 */
+export interface DashboardEventItem {
+  id: number
+  title: string
+  event_start_time: string
+  event_end_time: string
+  max_registrants: number
+  current_registrants: number
+  status: string
+}
+
+/** 统计条目 */
+export interface StatItem {
+  name: string
+  count: number
+}
+
+/** 活动报名统计 */
+export interface DashboardStatistics {
+  by_field: StatItem[]
+  by_unit: StatItem[]
+  by_department: StatItem[]
+  by_position: StatItem[]
 }

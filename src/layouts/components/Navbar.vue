@@ -6,7 +6,6 @@ import {
   Fold,
   Expand,
   Refresh,
-  FullScreen,
   ArrowDown,
 } from '@element-plus/icons-vue'
 
@@ -59,15 +58,6 @@ function refreshPage() {
         </span>
       </el-tooltip>
 
-      <!-- 全屏 -->
-      <el-tooltip content="全屏" placement="bottom">
-        <span class="navbar-icon">
-          <el-icon :size="18">
-            <FullScreen />
-          </el-icon>
-        </span>
-      </el-tooltip>
-
       <!-- 用户下拉 -->
       <el-dropdown trigger="click">
         <div class="user-info">
@@ -79,7 +69,7 @@ function refreshPage() {
         </div>
         <template #dropdown>
           <el-dropdown-menu>
-            <el-dropdown-item>
+            <el-dropdown-item @click="router.push('/profile')">
               <span>个人中心</span>
             </el-dropdown-item>
             <el-dropdown-item divided @click="handleLogout">
