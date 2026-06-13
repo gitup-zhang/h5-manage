@@ -30,6 +30,7 @@ const columns = [
   { prop: 'event_address', label: '地点', width: 160 },
   { prop: 'status', label: '状态', width: 100 },
   { prop: 'member_count', label: '报名/上限', width: 120 },
+  { prop: 'invite_code', label: '邀请码', width: 100 },
   { prop: 'event_start_time', label: '开始时间', width: 170 },
 ]
 
@@ -46,6 +47,10 @@ function handleCreate() {
 
 function handleEdit(row: EventItem) {
   router.push(`/event/${row.id}/edit`)
+}
+
+function handleDetail(row: EventItem) {
+  router.push(`/event/${row.id}/detail`)
 }
 
 function handleRegistrations(row: EventItem) {
@@ -86,14 +91,19 @@ fetchData()
           <template v-else-if="col.prop === 'member_count'" #default="{ row }">
             {{ row.current_registrants }}{{ row.max_registrants > 0 ? ` / ${row.max_registrants}` : ' / 不限' }}
           </template>
+          <template v-else-if="col.prop === 'invite_code'" #default="{ row }">
+            <span v-if="row.invite_code">{{ row.invite_code }}</span>
+            <span v-else>-</span>
+          </template>
           <template v-else-if="col.prop === 'event_start_time'" #default="{ row }">
             {{ formatDate(row.event_start_time) }}
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="240" fixed="right">
+        <el-table-column label="操作" width="280" fixed="right">
           <template #default="{ row }">
             <div class="action-btns">
+              <el-button type="primary" size="small" link @click="handleDetail(row)">详情</el-button>
               <el-button type="primary" size="small" link @click="handleEdit(row)">编辑</el-button>
               <el-button type="success" size="small" link @click="handleRegistrations(row)">报名</el-button>
               <el-button type="danger" size="small" link @click="handleDelete(row.id)">删除</el-button>

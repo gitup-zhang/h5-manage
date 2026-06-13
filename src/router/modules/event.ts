@@ -29,6 +29,12 @@ const eventRoutes: RouteRecordRaw = {
       meta: { title: '编辑活动', hidden: true },
     },
     {
+      path: ':id/detail',
+      name: 'EventDetail',
+      component: () => import('@/views/event/EventDetail.vue'),
+      meta: { title: '活动详情', hidden: true },
+    },
+    {
       path: ':id/registrations',
       name: 'EventRegistrations',
       component: () => import('@/views/event/EventRegistrations.vue'),

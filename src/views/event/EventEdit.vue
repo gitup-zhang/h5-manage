@@ -16,6 +16,14 @@ const editId = ref(0)
 const loading = ref(false)
 const fieldOptions = ref<Field[]>([])
 
+/** 用户报名信息字段选项：单位、部门、职位、行业，ID 分别为 1-4 */
+const userInfoFieldOptions = [
+  { id: 1, name: '单位' },
+  { id: 2, name: '部门' },
+  { id: 3, name: '职位' },
+  { id: 4, name: '行业' },
+]
+
 const formRef = ref()
 const form = reactive({
   title: '',
@@ -72,6 +80,7 @@ onMounted(async () => {
       form.need_invite_code = d.need_invite_code
       form.field_id_list = d.fields?.map((f) => f.field_id) || []
       form.image_id_list = d.images?.map((img) => img.image_id) || []
+      form.user_info_id_list = d.user_info?.map((u) => u.user_info_id) || []
     } catch { /* ignore */ }
     finally { loading.value = false }
   }
@@ -90,12 +99,16 @@ async function handleSubmit() {
 
   try {
     const fmt = (v: string) => v.replace('T', ' ') // YYYY-MM-DDTHH:mm:ss → YYYY-MM-DD HH:mm:ss
-    const data = {
+    const data: Record<string, unknown> = {
       ...form,
       event_start_time: fmt(form.event_start_time),
       event_end_time: fmt(form.event_end_time),
       registration_start_time: fmt(form.registration_start_time),
       registration_end_time: fmt(form.registration_end_time),
+    }
+    // 如果未选择任何信息字段，不传该参数
+    if (!form.user_info_id_list.length) {
+      delete data.user_info_id_list
     }
 
     if (isEdit.value) {
@@ -230,6 +243,22 @@ function goBack() {
               v-for="f in fieldOptions"
               :key="f.id"
               :label="f.field_name"
+              :value="f.id"
+            />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="报名信息字段">
+          <el-select
+            v-model="form.user_info_id_list"
+            multiple
+            placeholder="请选择用户报名时需填写的信息字段"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="f in userInfoFieldOptions"
+              :key="f.id"
+              :label="f.name"
               :value="f.id"
             />
           </el-select>
