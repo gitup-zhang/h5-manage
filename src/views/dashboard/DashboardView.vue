@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { formatDate, formatNumber } from '@/utils/format'
 import { useECharts } from '@/composables/useECharts'
@@ -15,6 +15,8 @@ import {
   TrendCharts,
   DataLine,
   Clock,
+  ArrowLeft,
+  ArrowRight,
 } from '@element-plus/icons-vue'
 
 const userStore = useUserStore()
@@ -28,6 +30,47 @@ const userTotal = ref(0)
 const events = ref<DashboardEventItem[]>([])
 const selectedEventId = ref<number | null>(null)
 const statistics = ref<DashboardStatistics | null>(null)
+
+// ===== 活动卡片横向滚动 =====
+const eventCardsRef = ref<HTMLElement | null>(null)
+const canScrollLeft = ref(false)
+const canScrollRight = ref(false)
+
+function updateScrollState() {
+  const el = eventCardsRef.value
+  if (!el) return
+  canScrollLeft.value = el.scrollLeft > 0
+  canScrollRight.value = Math.ceil(el.scrollLeft) < el.scrollWidth - el.clientWidth - 1
+}
+
+function scrollLeft() {
+  const el = eventCardsRef.value
+  if (!el) return
+  el.scrollBy({ left: -300, behavior: 'smooth' })
+}
+
+function scrollRight() {
+  const el = eventCardsRef.value
+  if (!el) return
+  el.scrollBy({ left: 300, behavior: 'smooth' })
+}
+
+// 监听活动数据变化，等 DOM 渲染完成后更新滚动状态
+watch(events, async () => {
+  await nextTick()
+  updateScrollState()
+})
+
+// 鼠标滚轮横向滚动
+function onCardWheel(e: WheelEvent) {
+  const el = eventCardsRef.value
+  if (!el) return
+  // 如果有纵向滚动，优先纵向；否则转为横向
+  if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+    e.preventDefault()
+    el.scrollLeft += e.deltaY
+  }
+}
 
 // ===== 派生数据 =====
 const today = computed(() => formatDate(new Date().toISOString(), 'YYYY-MM-DD HH:mm'))
@@ -62,6 +105,12 @@ function getRegProgress(row: DashboardEventItem): number {
   return Math.round((row.current_registrants / row.max_registrants) * 100)
 }
 
+function getRegColor(row: DashboardEventItem): string {
+  if (row.status === '进行中') return '#67c23a'
+  if (row.status === '已结束') return '#909399'
+  return '#409eff'
+}
+
 // ===== API 调用 =====
 async function fetchUserSummary() {
   try {
@@ -79,7 +128,7 @@ async function fetchEvents() {
     // 自动选中第一个活动
     if (events.value.length > 0 && !selectedEventId.value) {
       selectedEventId.value = events.value[0].id
-      fetchStatistics(events.value[0].id)
+      await fetchStatistics(events.value[0].id)
     }
   } catch {
     events.value = []
@@ -95,16 +144,18 @@ async function fetchStatistics(eventId: number) {
     updateCharts()
   } catch {
     statistics.value = null
+    await nextTick()
+    updateCharts()
   } finally {
     statsLoading.value = false
   }
 }
 
 // ===== 活动选中 =====
-function selectEvent(row: DashboardEventItem) {
+async function selectEvent(row: DashboardEventItem) {
   if (row.id === selectedEventId.value) return
   selectedEventId.value = row.id
-  fetchStatistics(row.id)
+  await fetchStatistics(row.id)
 }
 
 // ===== 图表 =====
@@ -116,21 +167,18 @@ const { setOption: setBarOption } = useECharts(barChartRef)
 const chartColors = ['#409eff', '#67c23a', '#e6a23c', '#f56c6c', '#909399', '#5470c6', '#91cc75', '#fac858']
 
 function updateCharts() {
-  if (!statistics.value) return
   updatePieChart()
   updateBarChart()
 }
 
 function updatePieChart() {
-  const data = statistics.value!.by_field
+  const data = (statistics.value?.by_field || [])
     .filter(item => item.count > 0)
     .map((item, i) => ({
       name: item.name,
       value: item.count,
       itemStyle: { color: chartColors[i % chartColors.length] },
     }))
-
-  if (data.length === 0) return
 
   setPieOption({
     tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
@@ -142,11 +190,12 @@ function updatePieChart() {
         center: ['50%', '45%'],
         roseType: 'area',
         itemStyle: { borderRadius: 4 },
-        data,
+        data: data.length > 0 ? data : [{ name: '暂无数据', value: 1, itemStyle: { color: '#e0e0e0' } }],
         label: { show: false },
         emphasis: {
           label: { show: true, fontSize: 14, fontWeight: 'bold' },
         },
+        silent: data.length === 0,
       },
     ],
   })
@@ -157,8 +206,6 @@ function updateBarChart() {
     .filter(item => item.count > 0)
     .sort((a, b) => b.count - a.count)
 
-  if (items.length === 0) return
-
   setBarOption({
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
     grid: { left: '3%', right: '8%', bottom: '3%', containLabel: true },
@@ -168,16 +215,16 @@ function updateBarChart() {
     },
     yAxis: {
       type: 'category',
-      data: items.map(i => i.name).reverse(),
+      data: items.length > 0 ? items.map(i => i.name).reverse() : ['暂无数据'],
       axisLabel: { fontSize: 11 },
       inverse: true,
     },
     series: [
       {
         type: 'bar',
-        data: items.map(i => i.count).reverse(),
+        data: items.length > 0 ? items.map(i => i.count).reverse() : [],
         itemStyle: {
-          color: '#409eff',
+          color: items.length > 0 ? '#409eff' : '#e0e0e0',
           borderRadius: [0, 4, 4, 0],
         },
         barMaxWidth: 28,
@@ -201,6 +248,8 @@ function getCardIconColor(index: number): string {
 onMounted(async () => {
   await Promise.all([fetchUserSummary(), fetchEvents()])
   loading.value = false
+  await nextTick()
+  updateScrollState()
 })
 </script>
 
@@ -265,52 +314,74 @@ onMounted(async () => {
       </el-col>
     </el-row>
 
-    <!-- 活动列表 -->
-    <el-card shadow="never" class="section-card">
+    <!-- 活动概览 - 横向滚动卡片 -->
+    <el-card shadow="never" class="section-card event-overview-card">
       <template #header>
-        <span class="card-title">活动概览</span>
+        <div class="card-header-row">
+          <span class="card-title">活动概览</span>
+          <span class="card-count">{{ events.length }} 个活动</span>
+        </div>
       </template>
-      <el-table
-        :data="events"
-        highlight-current-row
-        style="width: 100%"
-        @row-click="selectEvent"
-        :row-class-name="({ row }: { row: DashboardEventItem }) =>
-          row.id === selectedEventId ? 'selected-row' : ''
-        "
-      >
-        <el-table-column prop="title" label="活动标题" min-width="180" show-overflow-tooltip />
-        <el-table-column label="状态" width="90">
-          <template #default="{ row }">
-            <el-tag :type="getStatusTagType(row.status)" size="small">
-              {{ row.status }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column label="报名进度" width="200">
-          <template #default="{ row }">
-            <div class="progress-cell">
-              <el-progress
-                :percentage="getRegProgress(row)"
-                :stroke-width="8"
-                :color="row.status === '进行中' ? '#67c23a' : row.status === '已结束' ? '#909399' : '#409eff'"
-              />
-              <span class="progress-text">
-                {{ row.max_registrants > 0 ? `${row.current_registrants}/${row.max_registrants}` : `${row.current_registrants}/不限` }}
-              </span>
+      <div v-if="events.length > 0" class="event-scroll-area">
+        <button
+          class="scroll-arrow scroll-arrow--left"
+          :class="{ 'is-disabled': !canScrollLeft }"
+          :disabled="!canScrollLeft"
+          @click="scrollLeft"
+        >
+          <el-icon :size="18"><ArrowLeft /></el-icon>
+        </button>
+        <div
+          ref="eventCardsRef"
+          class="event-cards"
+          @scroll="updateScrollState"
+          @wheel="onCardWheel"
+        >
+          <div
+            v-for="event in events"
+            :key="event.id"
+            class="event-card"
+            :class="{ 'is-active': event.id === selectedEventId }"
+            @click="selectEvent(event)"
+          >
+            <div class="event-card__body">
+              <h4 class="event-card__title" :title="event.title">{{ event.title }}</h4>
+              <div class="event-card__meta">
+                <el-tag :type="getStatusTagType(event.status)" size="small" class="event-card__tag">
+                  {{ event.status }}
+                </el-tag>
+                <span class="event-card__date">{{ formatDate(event.event_start_time, 'MM-DD') }}</span>
+              </div>
+              <div class="event-card__progress">
+                <el-progress
+                  :percentage="getRegProgress(event)"
+                  :stroke-width="6"
+                  :color="getRegColor(event)"
+                  :show-text="false"
+                />
+                <span class="event-card__count">
+                  {{ event.max_registrants > 0 ? `${event.current_registrants}/${event.max_registrants}` : `${event.current_registrants}/不限` }}
+                </span>
+              </div>
             </div>
-          </template>
-        </el-table-column>
-        <el-table-column label="开始时间" width="130">
-          <template #default="{ row }">
-            {{ formatDate(row.event_start_time, 'YYYY-MM-DD') }}
-          </template>
-        </el-table-column>
-      </el-table>
+            <div v-if="event.id === selectedEventId" class="event-card__check">
+              <span class="check-dot" />
+            </div>
+          </div>
+        </div>
+        <button
+          class="scroll-arrow scroll-arrow--right"
+          :class="{ 'is-disabled': !canScrollRight }"
+          :disabled="!canScrollRight"
+          @click="scrollRight"
+        >
+          <el-icon :size="18"><ArrowRight /></el-icon>
+        </button>
+      </div>
       <div v-if="events.length === 0 && !loading" class="empty-hint">
         <el-empty description="暂无活动数据" :image-size="80" />
       </div>
-      <div v-if="selectedEvent" class="table-hint">
+      <div v-if="selectedEvent" class="card-hint">
         当前选中「{{ selectedEvent.title }}」— 下方展示该活动的报名统计图表
       </div>
     </el-card>
@@ -324,9 +395,6 @@ onMounted(async () => {
               <span class="card-title">报名领域分布</span>
             </template>
             <div ref="pieChartRef" class="chart-container" />
-            <div v-if="statistics && statistics.by_field.filter(i => i.count > 0).length === 0" class="chart-empty">
-              暂无数据
-            </div>
           </el-card>
         </el-col>
         <el-col :xs="24" :lg="12">
@@ -335,9 +403,6 @@ onMounted(async () => {
               <span class="card-title">报名部门分布</span>
             </template>
             <div ref="barChartRef" class="chart-container" />
-            <div v-if="statistics && statistics.by_department.filter(i => i.count > 0).length === 0" class="chart-empty">
-              暂无数据
-            </div>
           </el-card>
         </el-col>
       </el-row>
@@ -432,20 +497,165 @@ onMounted(async () => {
     }
   }
 
-  .progress-cell {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-
-    .el-progress {
-      flex: 1;
+  // ===== 活动概览卡片 =====
+  .event-overview-card {
+    .card-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
 
-    .progress-text {
+    .card-count {
+      font-size: 12px;
+      color: #909399;
+    }
+  }
+
+  .event-scroll-area {
+    position: relative;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+  }
+
+  .scroll-arrow {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border: 1px solid #e4e7ed;
+    border-radius: 50%;
+    background: #fff;
+    color: #606266;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    z-index: 1;
+    padding: 0;
+
+    &:hover:not(:disabled) {
+      background: #ecf5ff;
+      border-color: #409eff;
+      color: #409eff;
+    }
+
+    &.is-disabled,
+    &:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+  }
+
+  .scroll-arrow--left {
+    margin-right: 4px;
+  }
+
+  .scroll-arrow--right {
+    margin-left: 4px;
+  }
+
+  .event-cards {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 4px 0;
+    scroll-behavior: smooth;
+
+    // 隐藏滚动条但保持可滚动
+    scrollbar-width: none;
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  .event-card {
+    flex-shrink: 0;
+    width: 220px;
+    border: 1.5px solid #e4e7ed;
+    border-radius: 8px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    background: #fff;
+
+    &:hover {
+      border-color: #c6e2ff;
+      box-shadow: 0 2px 8px rgba(64, 158, 255, 0.12);
+    }
+
+    &.is-active {
+      border-color: #409eff;
+      background: #f0f7ff;
+      box-shadow: 0 2px 12px rgba(64, 158, 255, 0.18);
+    }
+
+    &__body {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    &__title {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 600;
+      color: #303133;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    &__meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    &__tag {
       flex-shrink: 0;
+    }
+
+    &__date {
       font-size: 12px;
       color: #909399;
       white-space: nowrap;
+    }
+
+    &__progress {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      .el-progress {
+        flex: 1;
+      }
+    }
+
+    &__count {
+      flex-shrink: 0;
+      font-size: 11px;
+      color: #909399;
+      white-space: nowrap;
+    }
+
+    &__check {
+      position: absolute;
+      top: -1px;
+      right: -1px;
+      width: 0;
+      height: 0;
+      border-style: solid;
+      border-width: 0 22px 22px 0;
+      border-color: transparent #409eff transparent transparent;
+
+      .check-dot {
+        display: none;
+      }
     }
   }
 
@@ -453,36 +663,19 @@ onMounted(async () => {
     margin-top: 16px;
   }
 
-  .table-hint {
+  .card-hint {
     margin-top: 12px;
     font-size: 12px;
     color: #909399;
     text-align: center;
   }
 
+  // ===== 图表区域 =====
   .charts-section {
     .chart-container {
       width: 100%;
       height: 300px;
     }
-
-    .chart-empty {
-      height: 200px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #909399;
-      font-size: 14px;
-    }
-  }
-}
-
-// 选中行高亮
-:deep(.selected-row) {
-  background-color: #ecf5ff !important;
-
-  &:hover > td {
-    background-color: #d9ecff !important;
   }
 }
 </style>

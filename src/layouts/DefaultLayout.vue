@@ -55,7 +55,6 @@ const appStore = useAppStore()
 
   .layout-main {
     flex: 1;
-    overflow-y: auto;
     padding: 16px;
   }
 }

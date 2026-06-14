@@ -6,11 +6,12 @@ import industryRoutes from './modules/industry'
 import fieldRoutes from './modules/field'
 import eventRoutes from './modules/event'
 import messageRoutes from './modules/message'
+import userInfoFieldRoutes from './modules/userInfoField'
 
 // 将所有业务模块路由挂载到 DefaultLayout 的 children 下
 // 这样导航到任何页面时，侧边栏和顶栏始终存在
 function getBusinessRoutes(): RouteRecordRaw[] {
-  const modules = [userRoutes, industryRoutes, fieldRoutes, eventRoutes, messageRoutes]
+  const modules = [userRoutes, industryRoutes, fieldRoutes, eventRoutes, messageRoutes, userInfoFieldRoutes]
   const children: RouteRecordRaw[] = []
 
   for (const mod of modules) {

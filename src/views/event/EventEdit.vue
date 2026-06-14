@@ -6,7 +6,8 @@ import { ArrowLeft } from '@element-plus/icons-vue'
 import ImageUpload from '@/components/common/ImageUpload.vue'
 import { getEventDetail, createEvent, updateEvent } from '@/api/modules/event'
 import { getFieldList } from '@/api/modules/field'
-import type { Field } from '@/types/user'
+import { getUserInfoFieldList } from '@/api/modules/userInfoField'
+import type { Field, UserInfoField } from '@/types/user'
 
 const router = useRouter()
 const route = useRoute()
@@ -16,13 +17,11 @@ const editId = ref(0)
 const loading = ref(false)
 const fieldOptions = ref<Field[]>([])
 
-/** 用户报名信息字段选项：单位、部门、职位、行业，ID 分别为 1-4 */
-const userInfoFieldOptions = [
-  { id: 1, name: '单位' },
-  { id: 2, name: '部门' },
-  { id: 3, name: '职位' },
-  { id: 4, name: '行业' },
-]
+/** 用户报名信息字段选项（从后端动态获取，排除姓名和手机号这两个必选字段） */
+const userInfoFieldOptions = ref<UserInfoField[]>([])
+
+/** 必选字段 ID（姓名、手机号），提交时自动合并到 user_info_id_list */
+const mandatoryFieldIds = ref<number[]>([])
 
 const formRef = ref()
 const form = reactive({
@@ -57,6 +56,20 @@ onMounted(async () => {
   try {
     const res = await getFieldList({ enable: 1 })
     fieldOptions.value = res.data
+  } catch { /* ignore */ }
+
+  // 加载用户报名信息字段（姓名和手机号为必选，不显示在选择框中）
+  try {
+    const res = await getUserInfoFieldList({ is_deleted: 'N' })
+    const allFields = res.data
+    // 记录必选字段 ID
+    mandatoryFieldIds.value = allFields
+      .filter((f) => f.code === 'name' || f.code === 'phone_number')
+      .map((f) => f.id)
+    // 下拉框中排除必选字段
+    userInfoFieldOptions.value = allFields.filter(
+      (f) => f.code !== 'name' && f.code !== 'phone_number',
+    )
   } catch { /* ignore */ }
 
   // 编辑模式
@@ -106,10 +119,9 @@ async function handleSubmit() {
       registration_start_time: fmt(form.registration_start_time),
       registration_end_time: fmt(form.registration_end_time),
     }
-    // 如果未选择任何信息字段，不传该参数
-    if (!form.user_info_id_list.length) {
-      delete data.user_info_id_list
-    }
+    // 自动合并必选字段（姓名、手机号）
+    const mergedIds = [...new Set([...mandatoryFieldIds.value, ...form.user_info_id_list])]
+    data.user_info_id_list = mergedIds
 
     if (isEdit.value) {
       await updateEvent(editId.value, data)
@@ -262,6 +274,7 @@ function goBack() {
               :value="f.id"
             />
           </el-select>
+          <span class="field-hint">姓名、手机号为必填项，无需选择，将自动包含在报名信息中</span>
         </el-form-item>
 
         <el-form-item label="活动详情" prop="detail">
@@ -289,6 +302,14 @@ function goBack() {
       display: flex;
       gap: 8px;
     }
+  }
+
+  .field-hint {
+    display: block;
+    font-size: 12px;
+    color: #909399;
+    margin-top: 4px;
+    line-height: 1.5;
   }
 }
 </style>

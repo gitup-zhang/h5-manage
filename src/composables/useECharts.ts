@@ -25,7 +25,12 @@ export function useECharts(containerRef: Ref<HTMLElement | null>) {
   // 监听容器就绪后初始化
   const stopWatch = watch(
     containerRef,
-    (el) => {
+    (el, oldEl) => {
+      // 容器元素更换：先清理旧实例
+      if (oldEl && oldEl !== el && chartInstance.value) {
+        chartInstance.value.dispose()
+        chartInstance.value = null
+      }
       if (el && !chartInstance.value) {
         init()
       }

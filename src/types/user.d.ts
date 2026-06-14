@@ -168,6 +168,22 @@ export interface UpdateFieldStatusParams {
   operation: 'ENABLE' | 'DISABLE'
 }
 
+// ====== 用户信息字段管理 ======
+
+/** 用户信息字段项 */
+export interface UserInfoField {
+  id: number
+  code: string
+  name: string
+  is_deleted: 'Y' | 'N'
+  is_deleted_desc: string
+}
+
+/** 更新用户信息字段状态参数 */
+export interface UpdateUserInfoFieldStatusParams {
+  is_deleted: 'Y' | 'N'
+}
+
 // ====== 活动管理 ======
 
 export interface EventField {
