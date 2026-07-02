@@ -3,6 +3,7 @@ import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft } from '@element-plus/icons-vue'
+import RichEditor from '@/components/editor/RichEditor.vue'
 import { createMessage } from '@/api/modules/message'
 import { getFieldList } from '@/api/modules/field'
 import type { Field, MessageTargetType } from '@/types/user'
@@ -76,7 +77,7 @@ async function handleSubmit() {
     }
     await createMessage(data)
     ElMessage.success('消息发送成功')
-    router.push('/message/list')
+    router.push('/redirect/message/list')
   } catch { /* 拦截器已处理 */ }
   finally {
     loading.value = false
@@ -120,14 +121,7 @@ function onTargetTypeChange() {
         </el-form-item>
 
         <el-form-item label="消息内容" prop="content">
-          <el-input
-            v-model="form.content"
-            type="textarea"
-            placeholder="请输入消息内容"
-            :rows="8"
-            maxlength="2000"
-            show-word-limit
-          />
+          <RichEditor v-model="form.content" placeholder="请输入消息内容" />
         </el-form-item>
 
         <el-form-item label="目标类型" prop="target_type">

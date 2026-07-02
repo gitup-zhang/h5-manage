@@ -105,7 +105,7 @@ fetchData()
             <div class="action-btns">
               <el-button type="primary" size="small" link @click="handleDetail(row)">详情</el-button>
               <el-button type="primary" size="small" link @click="handleEdit(row)">编辑</el-button>
-              <el-button type="success" size="small" link @click="handleRegistrations(row)">报名</el-button>
+              <el-button type="success" size="small" link @click="handleRegistrations(row)">报名用户</el-button>
               <el-button type="danger" size="small" link @click="handleDelete(row.id)">删除</el-button>
             </div>
           </template>

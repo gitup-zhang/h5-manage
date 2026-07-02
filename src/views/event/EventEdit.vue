@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft } from '@element-plus/icons-vue'
 import ImageUpload from '@/components/common/ImageUpload.vue'
+import RichEditor from '@/components/editor/RichEditor.vue'
 import { getEventDetail, createEvent, updateEvent } from '@/api/modules/event'
 import { getFieldList } from '@/api/modules/field'
 import { getUserInfoFieldList } from '@/api/modules/userInfoField'
@@ -130,7 +131,7 @@ async function handleSubmit() {
       await createEvent(data)
       ElMessage.success('创建成功')
     }
-    router.push('/event/list')
+    router.push('/redirect/event/list')
   } catch { /* ignore */ }
 }
 
@@ -278,12 +279,7 @@ function goBack() {
         </el-form-item>
 
         <el-form-item label="活动详情" prop="detail">
-          <el-input
-            v-model="form.detail"
-            type="textarea"
-            :rows="6"
-            placeholder="请输入活动详情..."
-          />
+          <RichEditor v-model="form.detail" placeholder="请输入活动详情..." />
         </el-form-item>
       </el-form>
     </el-card>

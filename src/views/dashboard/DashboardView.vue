@@ -188,7 +188,6 @@ function updatePieChart() {
         type: 'pie',
         radius: ['35%', '70%'],
         center: ['50%', '45%'],
-        roseType: 'area',
         itemStyle: { borderRadius: 4 },
         data: data.length > 0 ? data : [{ name: '暂无数据', value: 1, itemStyle: { color: '#e0e0e0' } }],
         label: { show: false },
@@ -202,7 +201,7 @@ function updatePieChart() {
 }
 
 function updateBarChart() {
-  const items = [...(statistics.value?.by_department || [])]
+  const items = [...(statistics.value?.by_industry || [])]
     .filter(item => item.count > 0)
     .sort((a, b) => b.count - a.count)
 
@@ -400,7 +399,7 @@ onMounted(async () => {
         <el-col :xs="24" :lg="12">
           <el-card shadow="never" v-loading="statsLoading">
             <template #header>
-              <span class="card-title">报名部门分布</span>
+              <span class="card-title">报名行业分布</span>
             </template>
             <div ref="barChartRef" class="chart-container" />
           </el-card>

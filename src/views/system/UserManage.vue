@@ -54,7 +54,6 @@ const {
 // ===== 表格列 =====
 const columns = [
   { prop: 'user_id', label: 'ID', width: 70 },
-  { prop: 'nickname', label: '昵称', width: 110 },
   { prop: 'name', label: '姓名', width: 100 },
   { prop: 'phone_number', label: '手机号', width: 135 },
   { prop: 'email', label: '邮箱', minWidth: 170 },

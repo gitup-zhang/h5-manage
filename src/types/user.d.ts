@@ -350,4 +350,5 @@ export interface DashboardStatistics {
   by_unit: StatItem[]
   by_department: StatItem[]
   by_position: StatItem[]
+  by_industry: StatItem[]
 }

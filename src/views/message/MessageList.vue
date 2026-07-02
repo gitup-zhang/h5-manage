@@ -6,6 +6,7 @@ import { getMessageList, deleteMessage } from '@/api/modules/message'
 import { getFieldList } from '@/api/modules/field'
 import { useCrud } from '@/composables/useCrud'
 import PageHeader from '@/components/common/PageHeader.vue'
+import { formatDate } from '@/utils/format'
 import type { MessageItem, Field } from '@/types/user'
 
 const router = useRouter()
@@ -34,7 +35,7 @@ const columns = [
   { prop: 'id', label: 'ID', width: 80 },
   { prop: 'title', label: '消息标题', minWidth: 200 },
   { prop: 'target_type', label: '目标类型', width: 120 },
-  { prop: 'target_id', label: '目标领域', width: 140 },
+  { prop: 'target_id', label: '目标内容', width: 140 },
   { prop: 'send_time', label: '发送时间', width: 180 },
   { prop: 'create_time', label: '创建时间', width: 180 },
 ]
@@ -103,7 +104,8 @@ function formatTargetType(type: string) {
 
 function formatTime(time: string) {
   if (!time) return '-'
-  return time.replace('T', ' ').replace('Z', '')
+  // 去掉时区偏移，如 +08:00、-05:00 等
+  return time.replace('T', ' ').replace('Z', '').replace(/[+-]\d{2}:\d{2}$/, '')
 }
 </script>
 
@@ -142,7 +144,7 @@ function formatTime(time: string) {
             <el-option label="按领域推送" value="FIELD" />
           </el-select>
         </el-form-item>
-        <el-form-item v-if="searchForm.target_type === 'FIELD'" label="目标领域">
+        <el-form-item v-if="searchForm.target_type === 'FIELD'" label="目标内容">
           <el-select
             v-model="searchForm.target_id"
             placeholder="请选择领域"
@@ -230,7 +232,7 @@ function formatTime(time: string) {
           </el-tag>
         </div>
         <div v-if="detailMessage.target_type === 'FIELD'" class="detail-item">
-          <span class="detail-label">目标领域：</span>
+          <span class="detail-label">目标内容：</span>
           <span>{{ fieldNameMap[detailMessage.target_id] || detailMessage.target_id }}</span>
         </div>
         <div class="detail-item">
@@ -239,7 +241,7 @@ function formatTime(time: string) {
         </div>
         <div class="detail-content">
           <div class="detail-label">消息内容：</div>
-          <div class="content-box">{{ detailMessage.content }}</div>
+          <div class="content-box" v-html="detailMessage.content"></div>
         </div>
       </template>
     </el-dialog>

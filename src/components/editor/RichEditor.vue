@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref, watch } from 'vue'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
@@ -12,7 +13,16 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]
+  blur: []
 }>()
+
+/**
+ * 双向同步控制：
+ * - isInternalChange: onUpdate 设为 true → watch 跳过（用户编辑不应触发 setContent）
+ * - isExternalUpdate: watch 中设为 true → onUpdate 跳过 emit（setContent 不应回写）
+ */
+const isInternalChange = ref(false)
+const isExternalUpdate = ref(false)
 
 const editor = useEditor({
   content: props.modelValue,
@@ -25,10 +35,32 @@ const editor = useEditor({
     }),
   ],
   onUpdate: ({ editor }) => {
-    const html = editor.getHTML()
-    emit('update:modelValue', html)
+    if (isExternalUpdate.value) return
+    isInternalChange.value = true
+    emit('update:modelValue', editor.getHTML())
+  },
+  onBlur: () => {
+    emit('blur')
   },
 })
+
+/** 编辑模式下异步加载数据后，同步外部内容到编辑器 */
+watch(
+  () => props.modelValue,
+  (newVal) => {
+    if (isInternalChange.value) {
+      isInternalChange.value = false
+      return
+    }
+    if (!editor.value) return
+    const editorHtml = editor.value.getHTML()
+    if (newVal !== editorHtml) {
+      isExternalUpdate.value = true
+      editor.value.commands.setContent(newVal)
+      isExternalUpdate.value = false
+    }
+  },
+)
 </script>
 
 <template>
@@ -36,6 +68,7 @@ const editor = useEditor({
     <!-- 工具栏 -->
     <div v-if="editor && !disabled" class="editor-toolbar">
       <button
+        type="button"
         :class="{ active: editor.isActive('bold') }"
         title="加粗"
         @click="editor.chain().focus().toggleBold().run()"
@@ -43,6 +76,7 @@ const editor = useEditor({
         <strong>B</strong>
       </button>
       <button
+        type="button"
         :class="{ active: editor.isActive('italic') }"
         title="斜体"
         @click="editor.chain().focus().toggleItalic().run()"
@@ -50,6 +84,7 @@ const editor = useEditor({
         <em>I</em>
       </button>
       <button
+        type="button"
         :class="{ active: editor.isActive('strike') }"
         title="删除线"
         @click="editor.chain().focus().toggleStrike().run()"
@@ -58,6 +93,7 @@ const editor = useEditor({
       </button>
       <span class="divider" />
       <button
+        type="button"
         :class="{ active: editor.isActive('heading', { level: 1 }) }"
         title="标题1"
         @click="editor.chain().focus().toggleHeading({ level: 1 }).run()"
@@ -65,6 +101,7 @@ const editor = useEditor({
         H1
       </button>
       <button
+        type="button"
         :class="{ active: editor.isActive('heading', { level: 2 }) }"
         title="标题2"
         @click="editor.chain().focus().toggleHeading({ level: 2 }).run()"
@@ -72,6 +109,7 @@ const editor = useEditor({
         H2
       </button>
       <button
+        type="button"
         :class="{ active: editor.isActive('heading', { level: 3 }) }"
         title="标题3"
         @click="editor.chain().focus().toggleHeading({ level: 3 }).run()"
@@ -80,6 +118,7 @@ const editor = useEditor({
       </button>
       <span class="divider" />
       <button
+        type="button"
         :class="{ active: editor.isActive('bulletList') }"
         title="无序列表"
         @click="editor.chain().focus().toggleBulletList().run()"
@@ -87,6 +126,7 @@ const editor = useEditor({
         • List
       </button>
       <button
+        type="button"
         :class="{ active: editor.isActive('orderedList') }"
         title="有序列表"
         @click="editor.chain().focus().toggleOrderedList().run()"
@@ -94,6 +134,7 @@ const editor = useEditor({
         1. List
       </button>
       <button
+        type="button"
         :class="{ active: editor.isActive('blockquote') }"
         title="引用"
         @click="editor.chain().focus().toggleBlockquote().run()"
@@ -102,12 +143,14 @@ const editor = useEditor({
       </button>
       <span class="divider" />
       <button
+        type="button"
         title="撤销"
         @click="editor.chain().focus().undo().run()"
       >
         ↶
       </button>
       <button
+        type="button"
         title="重做"
         @click="editor.chain().focus().redo().run()"
       >

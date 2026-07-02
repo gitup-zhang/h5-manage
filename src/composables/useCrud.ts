@@ -28,7 +28,7 @@ export function useCrud<T>(options: CrudOptions<T>) {
     try {
       const params = {
         page: pagination.page,
-        pageSize: pagination.pageSize,
+        page_size: pagination.pageSize,
         ...searchParams.value,
       }
       const res = await fetchApi(params)
