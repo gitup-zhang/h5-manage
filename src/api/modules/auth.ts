@@ -27,6 +27,16 @@ export function verifySms(data: SmsVerifyParams): Promise<ApiResponse<SmsVerifyR
   return post('/users/sms/verify', data as unknown as Record<string, unknown>)
 }
 
+/** 发送短信验证码（需登录，用于修改密码等场景） */
+export function sendSmsByUserId(data: SmsSendParams): Promise<ApiResponse<null>> {
+  return post('/users/sms/send-by-user-id', data as unknown as Record<string, unknown>)
+}
+
+/** 验证短信验证码（需登录，用于修改密码等场景），返回 verify_token */
+export function verifySmsByUserId(data: SmsVerifyParams): Promise<ApiResponse<SmsVerifyResult>> {
+  return post('/users/sms/verify-by-user-id', data as unknown as Record<string, unknown>)
+}
+
 // ====== 2. 注册 ======
 
 /** 用户注册 */

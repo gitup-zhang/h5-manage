@@ -2,7 +2,7 @@
 import { reactive, ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { sendSms, verifySms, register, resetPassword } from '@/api/modules/auth'
+import { sendSms, verifySms, register } from '@/api/modules/auth'
 import { ElMessage } from 'element-plus'
 import { Iphone, Lock, Message } from '@element-plus/icons-vue'
 
@@ -13,7 +13,7 @@ const route = useRoute()
 const userStore = useUserStore()
 
 // ===== Tab 切换 =====
-type LoginTab = 'password' | 'sms' | 'register' | 'reset'
+type LoginTab = 'password' | 'sms' | 'register'
 const activeTab = ref<LoginTab>('password')
 const loading = ref(false)
 
@@ -52,16 +52,6 @@ const registerRules = {
   smsCode: [{ required: true, message: '请输入验证码', trigger: 'blur' }],
 }
 
-// ===== 忘记密码 =====
-const resetForm = reactive({ newPassword: '', smsCode: '' })
-const resetRules = {
-  newPassword: [
-    { required: true, message: '请输入新密码', trigger: 'blur' },
-    { min: 6, message: '密码至少6位', trigger: 'blur' },
-  ],
-  smsCode: [{ required: true, message: '请输入验证码', trigger: 'blur' }],
-}
-
 // ===== SMS 倒计时 =====
 const smsCountdown = ref(0)
 let countdownTimer: ReturnType<typeof setInterval> | null = null
@@ -82,7 +72,7 @@ function startCountdown() {
 }
 
 /** 发送短信验证码 */
-async function handleSendSms(purpose: 'LOGIN' | 'REGISTER' | 'RESET_PASSWORD') {
+async function handleSendSms(purpose: 'LOGIN' | 'REGISTER') {
   const valid = /^1[3-9]\d{9}$/.test(phoneNumber.value)
   if (!valid) {
     ElMessage.warning('请输入正确的手机号')
@@ -99,7 +89,6 @@ async function handleSendSms(purpose: 'LOGIN' | 'REGISTER' | 'RESET_PASSWORD') {
 const passwordFormRef = ref()
 const smsFormRef = ref()
 const registerFormRef = ref()
-const resetFormRef = ref()
 
 // ===== 密码登录 =====
 async function handlePasswordLogin() {
@@ -171,32 +160,6 @@ async function handleRegister() {
   finally { loading.value = false }
 }
 
-// ===== 忘记密码 =====
-async function handleResetPassword() {
-  const valid1 = /^1[3-9]\d{9}$/.test(phoneNumber.value)
-  const valid2 = await resetFormRef.value?.validate().catch(() => false)
-  if (!valid1 || !valid2) return
-
-  loading.value = true
-  try {
-    // 1. 校验验证码
-    const verifyRes = await verifySms({
-      phone_number: phoneNumber.value,
-      code: resetForm.smsCode,
-      purpose: 'RESET_PASSWORD',
-    })
-    // 2. 重置密码
-    await resetPassword({
-      phone_number: phoneNumber.value,
-      verify_token: verifyRes.data.verify_token,
-      new_password: resetForm.newPassword,
-    })
-    ElMessage.success('密码重置成功，请登录')
-    activeTab.value = 'password'
-  } catch { /* ignore */ }
-  finally { loading.value = false }
-}
-
 function goRedirect() {
   const redirect = (route.query.redirect as string) || '/'
   router.push(redirect)
@@ -207,7 +170,6 @@ const tabs: { key: LoginTab; label: string }[] = [
   { key: 'password', label: '密码登录' },
   { key: 'sms', label: '验证码登录' },
   { key: 'register', label: '注册' },
-  { key: 'reset', label: '忘记密码' },
 ]
 </script>
 
@@ -392,61 +354,6 @@ const tabs: { key: LoginTab; label: string }[] = [
             </el-form>
           </template>
 
-          <!-- ========== 忘记密码 ========== -->
-          <template v-if="activeTab === 'reset'">
-            <el-form
-              ref="resetFormRef"
-              :model="resetForm"
-              :rules="resetRules"
-              size="large"
-            >
-              <el-form-item prop="phone_number">
-                <el-input
-                  v-model="phoneNumber"
-                  placeholder="请输入手机号"
-                  :prefix-icon="Iphone"
-                  maxlength="11"
-                />
-              </el-form-item>
-              <el-form-item prop="newPassword">
-                <el-input
-                  v-model="resetForm.newPassword"
-                  type="password"
-                  placeholder="请设置新密码（至少6位）"
-                  :prefix-icon="Lock"
-                  show-password
-                />
-              </el-form-item>
-              <el-form-item prop="smsCode">
-                <div class="sms-row">
-                  <el-input
-                    v-model="resetForm.smsCode"
-                    placeholder="请输入验证码"
-                    :prefix-icon="Message"
-                    maxlength="4"
-                    class="sms-input"
-                  />
-                  <el-button
-                    class="sms-btn"
-                    :disabled="smsButtonDisabled"
-                    @click="handleSendSms('RESET_PASSWORD')"
-                  >
-                    {{ smsButtonText }}
-                  </el-button>
-                </div>
-              </el-form-item>
-              <el-form-item>
-                <el-button
-                  type="primary"
-                  class="submit-btn"
-                  :loading="loading"
-                  @click="handleResetPassword"
-                >
-                  重置密码
-                </el-button>
-              </el-form-item>
-            </el-form>
-          </template>
         </div>
       </div>
     </div>

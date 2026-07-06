@@ -2,7 +2,7 @@
 import { reactive, ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { updateUserInfo, changePassword, sendSms, verifySms } from '@/api/modules/auth'
+import { updateUserInfo, changePassword, sendSmsByUserId, verifySmsByUserId } from '@/api/modules/auth'
 import { getIndustryList } from '@/api/modules/industry'
 import { getFieldList } from '@/api/modules/field'
 import { ElMessage } from 'element-plus'
@@ -162,10 +162,10 @@ function startCountdown() {
   }, 1000)
 }
 
-/** 发送短信验证码 */
+/** 发送短信验证码（修改密码场景，需登录认证） */
 async function handleSendChangePwdSms() {
   try {
-    await sendSms({ phone_number: phoneNumber.value, purpose: 'CHANGE_PASSWORD' })
+    await sendSmsByUserId({ phone_number: phoneNumber.value, purpose: 'CHANGE_PASSWORD' })
     ElMessage.success('验证码已发送')
     startCountdown()
   } catch { /* 拦截器已处理 */ }
@@ -188,8 +188,8 @@ async function handleChangePassword() {
 
   passwordLoading.value = true
   try {
-    // 1. 校验验证码
-    const verifyRes = await verifySms({
+    // 1. 校验验证码（修改密码场景，需登录认证）
+    const verifyRes = await verifySmsByUserId({
       phone_number: phoneNumber.value,
       code: passwordForm.smsCode,
       purpose: 'CHANGE_PASSWORD',
